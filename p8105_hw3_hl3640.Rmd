@@ -1,0 +1,13 @@
+---
+title: "Homework 3"
+author: "Hongjie Liu"
+output: github_document
+---
+
+
+Load necessary packages for homework 3.
+
+```{r loadpackages, message = FALSE}
+library(tidyverse)
+library(p8105.datasets)
+```
