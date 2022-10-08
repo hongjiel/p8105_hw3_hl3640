@@ -11,3 +11,87 @@ Load necessary packages for homework 3.
 library(tidyverse)
 library(p8105.datasets)
 ```
+
+
+## Problem 1
+
+Read the dataset `instacart`.
+
+```{r p1_readdata}
+data("instacart")
+```
+
+Here is a short description of the dataset:
+
+* The variables of the dataset are ``r names(instacart)``.
+* The dataset has `r nrow(instacart)` rows (number of observations) and `r ncol(instacart)` columns.
+* Some variables' meaning: `order_dow` indicates the day of the week on which the order was placed; `order_hour_of_day` indicates the hour of the day on which the order was placed. `days_since_prior_order` indicates days since the last order, capped at 30, NA if `order_number = 1`; `product_name` indicates name of the product; the value of the variable `reordered` is 1 if this product has been ordered by this user in the past, 0 otherwise.
+
+```{r p1_aisles}
+aisles_df = instacart %>% 
+  group_by(aisle) %>% 
+  summarize(n_obs = n()) %>% 
+  mutate(n_ranking = min_rank(desc(n_obs))) %>% 
+  arrange(n_ranking)
+```
+
+There are `r nrow(aisles_df)` aisles, and the aisle "`r pull(aisles_df, aisle)[1]`" is the most items ordered from.
+
+Make a plot that shows the number of items ordered in each aisle, limiting this to aisles with more than 10000 items ordered. Arrange aisles sensibly, and organize your plot so others can read it.
+
+```{r p1_plot1}
+aisles_df %>% 
+  filter(n_obs > 10000) %>% 
+  ggplot(aes(x = reorder(aisle, -n_obs), y = n_obs)) +
+  geom_col() +
+  labs(x = "Aisles",
+       y = "Number of Items Ordered") +
+  scale_y_continuous(
+    breaks = c(10000, 20000, 40000, 80000, 160000),
+    trans = "sqrt") +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1))
+```
+
+Make a table showing the three most popular items in each of the aisles “baking ingredients”, “dog food care”, and “packaged vegetables fruits”. Include the number of times each item is ordered in your table.
+
+```{r p1_table1, message = FALSE}
+instacart %>% 
+  filter(aisle %in% c("baking ingredients", "dog food care", "packaged vegetables fruits")) %>% 
+  group_by(aisle, product_name) %>% 
+  summarize(n_obs = n()) %>% 
+  filter(min_rank(desc(n_obs)) < 4) %>% 
+  arrange(aisle, desc(n_obs)) %>% 
+  knitr::kable(caption = "Table 1.1", col.names = c("Aisle", "Item", "Number of Times Ordered"))
+```
+
+Make a table showing the mean hour of the day at which Pink Lady Apples and Coffee Ice Cream are ordered on each day of the week; format this table for human readers (i.e. produce a 2 x 7 table).
+
+```{r p1_table2, message = FALSE}
+instacart %>% 
+  filter(product_name %in% c("Pink Lady Apples", "Coffee Ice Cream")) %>% 
+  group_by(product_name, order_dow) %>% 
+  summarize(mean_hour = mean(order_hour_of_day)) %>% 
+  mutate(
+    order_dow = as.character(order_dow),
+    order_dow = 
+      recode(
+        order_dow, 
+        "0" = "Sunday",
+        "1" = "Monday",
+        "2" = "Tuesday",
+        "3" = "Wednesday",
+        "4" = "Thursday",
+        "5" = "Friday",
+        "6" = "Saturday"
+      )
+  ) %>% 
+  pivot_wider(
+  names_from = "order_dow", 
+  values_from = "mean_hour"
+  ) %>% 
+  rename(Item = product_name) %>% 
+  knitr::kable(
+    caption = "Table 1.2: mean hour of the day at which items are ordered on each day of the week",
+    digit = 1
+  )
+```
