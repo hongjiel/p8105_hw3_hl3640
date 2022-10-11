@@ -10,6 +10,7 @@ Load necessary packages for homework 3.
 ```{r loadpackages, message = FALSE}
 library(tidyverse)
 library(p8105.datasets)
+library(scales)
 ```
 
 
@@ -44,11 +45,14 @@ aisles_df %>%
   filter(n_obs > 10000) %>% 
   ggplot(aes(x = reorder(aisle, -n_obs), y = n_obs)) +
   geom_col() +
-  labs(x = "Aisles",
-       y = "Number of Items Ordered") +
+  labs(
+    x = "Aisles",
+    y = "Number of Items Ordered"
+  ) +
   scale_y_continuous(
     breaks = c(10000, 20000, 40000, 80000, 160000),
-    trans = "sqrt") +
+    trans = "sqrt"
+  ) +
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1))
 ```
 
@@ -61,7 +65,7 @@ instacart %>%
   summarize(n_obs = n()) %>% 
   filter(min_rank(desc(n_obs)) < 4) %>% 
   arrange(aisle, desc(n_obs)) %>% 
-  knitr::kable(caption = "Table 1.1", col.names = c("Aisle", "Item", "Number of Times Ordered"))
+  knitr::kable(caption = "Table 1.1 three most popular items in each of the aisles", col.names = c("Aisle", "Item", "Number of Times Ordered"))
 ```
 
 Make a table showing the mean hour of the day at which Pink Lady Apples and Coffee Ice Cream are ordered on each day of the week; format this table for human readers (i.e. produce a 2 x 7 table).
@@ -95,3 +99,71 @@ instacart %>%
     digit = 1
   )
 ```
+
+
+## Problem 2
+
+
+Load, tidy, and otherwise wrangle the data. The final dataset `accel_df` includes all originally observed variables and values; has useful variable names; includes a weekday vs weekend variable; and encodes data with reasonable variable classes.
+
+```{r p2_readtidy, message = FALSE}
+accel_df =
+  read_csv("./data/accel_data.csv") %>% 
+  janitor::clean_names() %>% 
+  pivot_longer(
+    cols = activity_1:activity_1440,
+    names_to = "minute",
+    names_prefix = "activity_",
+    values_to = "activity_counts"
+  ) %>% 
+  mutate(
+    weekday = ifelse(day %in% c("Saturday", "Sunday"), FALSE, TRUE),
+    minute = as.numeric(minute),
+    day = factor(day, levels = c("Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"))
+  )
+
+accel_df
+```
+
+Here is a short description of the resulting dataset `accel_df`:
+
+* The variables are ``r names(accel_df)``.
+* The dataset has `r nrow(accel_df)` rows (number of observations) and `r ncol(accel_df)` columns.
+
+Using the tidied dataset, aggregate across minutes to create a total activity variable for each day, and create a table showing these totals.
+
+```{r p2_table, message = FALSE}
+accel_df %>% 
+  group_by(week, day) %>% 
+  summarize(total_activity = sum(activity_counts)) %>% 
+  pivot_wider(
+    names_from = day,
+    values_from = total_activity
+  ) %>% 
+  knitr::kable(caption = "Table 2.1 total activity for each day", digit = 0)
+```
+
+From the table, it seems that there are no apparent trends. Besides, 2 observations (the two Saturdays in week 4 and week 5) have `total_activity = 1440` with `activity_counts = 1` for each minute, and they are probably caused by mistake.
+
+Make a single-panel plot that shows the 24-hour activity time courses for each day and use color to indicate day of the week.
+
+```{r p2_plot, message = FALSE}
+accel_df %>% 
+  mutate(
+    time =
+      paste(
+        as.character(sprintf("%02d", minute %/% 60)),
+        as.character(sprintf("%02d", minute %% 60)),
+        sep = ":"
+      ) %>% 
+      as.POSIXct(format = "%H:%M", tz = "America/New_York")
+  ) %>% 
+  ggplot(aes(x = time, y = activity_counts, color = day)) +
+  geom_line(alpha = .25) +
+  geom_smooth(se = FALSE) +
+  scale_x_datetime(labels = date_format("%I:%M %p", tz = "America/New_York")) +
+  labs(x = "Time", y = "Activity Counts", color = "Day of the Week") +
+  theme(legend.position = "bottom")
+```
+
+It seems that activity counts peak on Friday at around 9 pm and on Saturday at around 10:30 am, and are relatively low between midnight and dawn (may be sleeping hours).
