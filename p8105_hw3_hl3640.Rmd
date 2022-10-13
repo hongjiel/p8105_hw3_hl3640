@@ -11,6 +11,8 @@ Load necessary packages for homework 3.
 library(tidyverse)
 library(p8105.datasets)
 library(scales)
+library(ggridges)
+library(gridExtra)
 ```
 
 
@@ -40,7 +42,7 @@ There are `r nrow(aisles_df)` aisles, and the aisle "`r pull(aisles_df, aisle)[1
 
 Make a plot that shows the number of items ordered in each aisle, limiting this to aisles with more than 10000 items ordered. Arrange aisles sensibly, and organize your plot so others can read it.
 
-```{r p1_plot1}
+```{r p1_plot}
 aisles_df %>% 
   filter(n_obs > 10000) %>% 
   ggplot(aes(x = reorder(aisle, -n_obs), y = n_obs)) +
@@ -65,7 +67,7 @@ instacart %>%
   summarize(n_obs = n()) %>% 
   filter(min_rank(desc(n_obs)) < 4) %>% 
   arrange(aisle, desc(n_obs)) %>% 
-  knitr::kable(caption = "Table 1.1 three most popular items in each of the aisles", col.names = c("Aisle", "Item", "Number of Times Ordered"))
+  knitr::kable(caption = "Table 1.1: three most popular items in each of the aisles", col.names = c("Aisle", "Item", "Number of Times Ordered"))
 ```
 
 Make a table showing the mean hour of the day at which Pink Lady Apples and Coffee Ice Cream are ordered on each day of the week; format this table for human readers (i.e. produce a 2 x 7 table).
@@ -140,7 +142,7 @@ accel_df %>%
     names_from = day,
     values_from = total_activity
   ) %>% 
-  knitr::kable(caption = "Table 2.1 total activity for each day", digit = 0)
+  knitr::kable(caption = "Table 2.1: total activity for each day", digit = 0)
 ```
 
 From the table, it seems that there are no apparent trends. Besides, 2 observations (the two Saturdays in week 4 and week 5) have `total_activity = 1440` with `activity_counts = 1` for each minute, and they are probably caused by mistake.
@@ -152,8 +154,8 @@ accel_df %>%
   mutate(
     time =
       paste(
-        as.character(sprintf("%02d", minute %/% 60)),
-        as.character(sprintf("%02d", minute %% 60)),
+        as.character(sprintf("%02d", (minute - 1) %/% 60)),
+        as.character(sprintf("%02d", (minute - 1) %% 60)),
         sep = ":"
       ) %>% 
       as.POSIXct(format = "%H:%M", tz = "America/New_York")
@@ -166,4 +168,91 @@ accel_df %>%
   theme(legend.position = "bottom")
 ```
 
-It seems that activity counts peak on Friday at around 9 pm and on Saturday at around 10:30 am, and are relatively low between midnight and dawn (may be sleeping hours).
+It seems that activity counts peak on Friday at around 9 pm and on Saturday at around 10:30 am, and are relatively low between midnight and dawn (probably sleeping hours).
+
+
+## Problem 3
+
+Read the dataset `ny_noaa`.
+
+```{r p3_readdata}
+data("ny_noaa")
+```
+
+Here is a description of the dataset `ny_noaa`:
+
+* The variables of the dataset are ``r names(ny_noaa)``.
+* The dataset has `r nrow(ny_noaa)` rows (number of observations) and `r ncol(ny_noaa)` columns.
+* `id` indicates weather station ID; `prcp` indicates precipitation; `snow` indicates snowfall; `snwd` indicates snow depth; `tmax` and `tmin` indicate max and min temperature respectively.
+* There are `r  round(nrow(drop_na(ny_noaa)) / nrow(ny_noaa), 3) * 100`% of the observations contain at least one missing value.
+
+Do some data cleaning. Create separate variables for year, month, and day. Ensure observations for temperature, precipitation, and snowfall are given in reasonable units. For temperature, the unit is degree Celsius. For precipitation, the unit is millimeter. For snowfall and snow depth, the units are centimeter. (we keep the `snow` variable and add a new variable `snow_cm` for unit changes)
+
+```{r p3_readtidy}
+noaa_df = ny_noaa %>% 
+  separate(date, into = c("year", "month", "day"), sep = "-", convert = TRUE) %>% 
+  mutate(
+    month = month.name[month],
+    tmax = as.numeric(tmax),
+    tmin = as.numeric(tmin),
+    prcp = prcp / 10,
+    snow_cm = snow / 10,
+    snwd = snwd / 10,
+    tmax = tmax / 10,
+    tmin = tmin / 10,
+  )
+
+mc_value =
+  noaa_df %>% 
+  drop_na() %>% 
+  group_by(snow) %>% 
+  summarize(n_obs = n()) %>% 
+  mutate(n_ranking = min_rank(desc(n_obs))) %>% 
+  arrange(n_ranking) %>% 
+  select(snow)
+```
+
+For snowfall, the most commonly observed value is `r mc_value[1, 1]`. I think it's because most days of the year do not snow.
+
+Make a two-panel plot showing the average max temperature in January and in July in each station across years.
+
+```{r p3_plot1, message = FALSE, warning = FALSE}
+noaa_df %>% 
+  filter(month %in% c("January", "July")) %>% 
+  group_by(month, id, year) %>% 
+  summarize(mean_tmax = mean(tmax)) %>% 
+  drop_na() %>% 
+  ggplot(aes(x = year, y = mean_tmax, color = id)) +
+  geom_line(alpha = .5) +
+  geom_smooth(se = FALSE) +
+  facet_wrap(. ~ month, ncol = 1,  scales = "free_y") +
+  labs(x = "Year", y = "Average Max Temperature (°C)") +
+  theme(legend.position = "none")
+```
+
+From the plot, it seems that there is no apparent increasing or decreasing trend in average max temperature in January and in July. There is an apparent outlier, which is the average max temperature in July in 1988 in one station.
+
+Make a two-panel plot showing (i) `tmax` vs `tmin` for the full dataset (note that a scatterplot may not be the best option); and (ii) make a plot showing the distribution of snowfall values greater than 0 mm and less than 100 mm separately by year.
+
+
+```{r p3_plot2, message = FALSE , warning = FALSE}
+plot_a =
+  ggplot(noaa_df, aes(x = tmax, y = tmin)) +
+  geom_hex() +
+  labs(x = "Max Temperature (°C)", y = "Min Temperature (°C)") +
+  theme(legend.position = "none")
+
+plot_b =
+  noaa_df %>% 
+  filter(
+    snow > 0,
+    snow < 100
+  ) %>% 
+  mutate(year = as.character(year)) %>% 
+  ggplot(aes(x = snow, y = year)) +
+  geom_density_ridges(scale = .85) +
+  scale_y_discrete(limits = rev) +
+  labs(x = "Snowfall (mm)", y = "Year")
+
+grid.arrange(plot_a, plot_b, ncol = 2)
+```
