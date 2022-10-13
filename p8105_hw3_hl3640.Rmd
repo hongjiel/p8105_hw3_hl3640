@@ -168,7 +168,7 @@ accel_df %>%
   theme(legend.position = "bottom")
 ```
 
-It seems that activity counts peak on Friday at around 9 pm and on Saturday at around 10:30 am, and are relatively low between midnight and dawn (probably sleeping hours).
+It seems that activity counts peak on Friday at around 9 pm and on Sunday at around 10:30 am, and are relatively low between midnight and dawn (probably sleeping hours).
 
 
 ## Problem 3
@@ -230,10 +230,9 @@ noaa_df %>%
   theme(legend.position = "none")
 ```
 
-From the plot, it seems that there is no apparent increasing or decreasing trend in average max temperature in January and in July. There is an apparent outlier, which is the average max temperature in July in 1988 in one station.
+From the plot, it seems that there is no apparent increasing or decreasing trend in average max temperature in January and in July in each station. There is an apparent outlier, which is the average max temperature in July in 1988 in one station.
 
-Make a two-panel plot showing (i) `tmax` vs `tmin` for the full dataset (note that a scatterplot may not be the best option); and (ii) make a plot showing the distribution of snowfall values greater than 0 mm and less than 100 mm separately by year.
-
+Make a two-panel plot showing (i) `tmax` vs `tmin` for the full dataset (note that a scatterplot may not be the best option); and (ii) make a plot showing the distribution of snowfall values greater than 0 mm and less than 100 mm separately by year. 
 
 ```{r p3_plot2, message = FALSE , warning = FALSE}
 plot_a =
