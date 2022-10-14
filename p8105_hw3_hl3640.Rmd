@@ -46,7 +46,7 @@ Make a plot that shows the number of items ordered in each aisle, limiting this 
 aisles_df %>% 
   filter(n_obs > 10000) %>% 
   ggplot(aes(x = reorder(aisle, -n_obs), y = n_obs)) +
-  geom_col() +
+  geom_point() +
   labs(
     x = "Aisles",
     y = "Number of Items Ordered"
@@ -184,7 +184,7 @@ Here is a description of the dataset `ny_noaa`:
 * The variables of the dataset are ``r names(ny_noaa)``.
 * The dataset has `r nrow(ny_noaa)` rows (number of observations) and `r ncol(ny_noaa)` columns.
 * `id` indicates weather station ID; `prcp` indicates precipitation; `snow` indicates snowfall; `snwd` indicates snow depth; `tmax` and `tmin` indicate max and min temperature respectively.
-* There are `r  round(nrow(drop_na(ny_noaa)) / nrow(ny_noaa), 3) * 100`% of the observations contain at least one missing value.
+* `r  round(nrow(drop_na(ny_noaa)) / nrow(ny_noaa), 3) * 100`% of the observations contain at least one missing value.
 
 Do some data cleaning. Create separate variables for year, month, and day. Ensure observations for temperature, precipitation, and snowfall are given in reasonable units. For temperature, the unit is degree Celsius. For precipitation, the unit is millimeter. For snowfall and snow depth, the units are centimeter. (we keep the `snow` variable and add a new variable `snow_cm` for unit changes)
 
@@ -224,13 +224,12 @@ noaa_df %>%
   drop_na() %>% 
   ggplot(aes(x = year, y = mean_tmax, color = id)) +
   geom_line(alpha = .5) +
-  geom_smooth(se = FALSE) +
   facet_wrap(. ~ month, ncol = 1,  scales = "free_y") +
   labs(x = "Year", y = "Average Max Temperature (°C)") +
   theme(legend.position = "none")
 ```
 
-From the plot, it seems that there is no apparent increasing or decreasing trend in average max temperature in January and in July in each station. There is an apparent outlier, which is the average max temperature in July in 1988 in one station.
+From the plot, it seems that there is no apparent increasing or decreasing trend in average max temperature in January and in July in each station. There is an apparent outlier, which is the average max temperature in July 1988 in one station.
 
 Make a two-panel plot showing (i) `tmax` vs `tmin` for the full dataset (note that a scatterplot may not be the best option); and (ii) make a plot showing the distribution of snowfall values greater than 0 mm and less than 100 mm separately by year. 
 
